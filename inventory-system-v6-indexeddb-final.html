@@ -1,0 +1,2004 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>庫存與維修管理系統</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; }
+        
+        .login-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .login-box { background: white; padding: 3rem; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 400px; }
+        .login-title { font-size: 2rem; font-weight: bold; color: #333; margin-bottom: 0.5rem; text-align: center; }
+        .login-subtitle { color: #666; text-align: center; margin-bottom: 2rem; font-size: 0.9rem; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-input { width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 5px; font-size: 1rem; }
+        .form-input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 5px rgba(102, 126, 234, 0.3); }
+        .login-btn { width: 100%; padding: 0.75rem; background: #667eea; color: white; border: none; border-radius: 5px; font-size: 1rem; font-weight: bold; cursor: pointer; }
+        .login-btn:hover { background: #5568d3; }
+        
+        .app-container { display: flex; min-height: 100vh; }
+        .sidebar { width: 250px; background: #1e293b; color: white; padding: 1.5rem; overflow-y: auto; position: fixed; left: 0; top: 0; height: 100vh; z-index: 1000; transition: transform 0.3s; }
+        .sidebar.hidden { transform: translateX(-100%); }
+        .sidebar-header { font-size: 1.5rem; font-weight: bold; margin-bottom: 2rem; }
+        .sidebar-menu { display: flex; flex-direction: column; gap: 0.5rem; }
+        .menu-item { padding: 0.75rem 1rem; background: rgba(255,255,255,0.1); border-radius: 5px; cursor: pointer; transition: background 0.3s; font-size: 0.95rem; display: flex; justify-content: space-between; align-items: center; user-select: none; }
+        .menu-item:hover:not(.disabled) { background: rgba(255,255,255,0.2); }
+        .menu-item.active { background: #667eea; font-weight: bold; }
+        .menu-item.disabled { opacity: 0.5; cursor: not-allowed; background: rgba(255,255,255,0.05); }
+        .menu-drag-handle { cursor: grab; opacity: 0.6; }
+        
+        .main-content { flex: 1; margin-left: 250px; display: flex; flex-direction: column; }
+        .header { background: white; padding: 1.5rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .header-title { font-size: 1.5rem; font-weight: bold; }
+        .content { flex: 1; padding: 2rem; overflow-y: auto; }
+        .page-content { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        
+        .search-box { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .search-input { flex: 1; min-width: 200px; padding: 0.75rem; border: 1px solid #ddd; border-radius: 5px; }
+        .search-btn { padding: 0.75rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .search-btn:hover { background: #5568d3; }
+        
+        .upload-area { border: 2px dashed #667eea; border-radius: 5px; padding: 1.5rem; text-align: center; cursor: pointer; transition: background 0.3s; }
+        .upload-area:hover { background: #f0f4ff; }
+        .upload-area.dragover { background: #e8ecff; }
+        .upload-area.file-selected { background: #f0fff4; border-color: #10b981; }
+        
+        .import-section { border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
+        .import-section h3 { margin-bottom: 1rem; color: #374151; }
+        .import-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.95rem; }
+        table th, table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #ddd; }
+        table th { background: #f5f5f5; font-weight: bold; }
+        table tr:hover { background: #f9f9f9; }
+        
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+        .form-row.full { grid-template-columns: 1fr; }
+        .form-group-item { display: flex; flex-direction: column; }
+        .form-group-item label { margin-bottom: 0.5rem; font-weight: bold; font-size: 0.9rem; }
+        .form-group-item input, .form-group-item select, .form-group-item textarea { padding: 0.75rem; border: 1px solid #ddd; border-radius: 5px; }
+        
+        .btn { padding: 0.75rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 0.95rem; }
+        .btn:hover { background: #5568d3; }
+        .btn.danger { background: #ef4444; }
+        .btn.danger:hover { background: #dc2626; }
+        .btn.success { background: #10b981; }
+        .btn.success:hover { background: #059669; }
+        .btn.small { padding: 0.5rem 1rem; font-size: 0.85rem; }
+        .btn.warning { background: #f59e0b; }
+        .btn.warning:hover { background: #d97706; }
+        
+        .logout-btn { width: 100%; padding: 0.75rem; background: #ef4444; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 2rem; }
+        .mobile-menu-toggle { display: none; background: none; border: none; color: #333; font-size: 1.5rem; cursor: pointer; }
+        
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #10b981; color: white; padding: 1rem 1.5rem; border-radius: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 2000; }
+        .toast.error { background: #ef4444; }
+        
+        .tab-container { margin-bottom: 1.5rem; border-bottom: 2px solid #ddd; display: flex; gap: 1rem; flex-wrap: wrap; }
+        .tab { padding: 0.75rem 1.5rem; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s; }
+        .tab.active { border-bottom-color: #667eea; color: #667eea; font-weight: bold; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; margin: 1rem 0; }
+        .calendar-header { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; margin-bottom: 1rem; font-weight: bold; text-align: center; }
+        .calendar-day { min-height: 100px; border: 1px solid #ddd; padding: 0.5rem; border-radius: 5px; background: white; cursor: pointer; overflow-y: auto; }
+        .calendar-day:hover { background: #f0f4ff; }
+        .calendar-day.other-month { color: #ccc; background: #f9f9f9; }
+        .calendar-day.today { background: #e8ecff; border: 2px solid #667eea; }
+        .calendar-day-num { font-weight: bold; margin-bottom: 0.25rem; font-size: 0.9rem; }
+        .calendar-events { font-size: 0.75rem; }
+        .calendar-event { padding: 0.25rem 0.5rem; margin: 0.25rem 0; border-radius: 3px; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 3000; align-items: center; justify-content: center; }
+        .modal.show { display: flex; }
+        .modal-content { background: white; padding: 2rem; border-radius: 10px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; }
+        .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+        
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0; }
+        .checkbox-item { display: flex; align-items: center; }
+        .checkbox-item input { margin-right: 0.5rem; }
+        
+        .layout-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        @media (max-width: 1024px) { .layout-2col { grid-template-columns: 1fr; } }
+        
+        .repair-col-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem; border-bottom: 1px solid #eee; }
+        .repair-col-row input[type="number"] { width: 80px; padding: 0.35rem 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem; }
+        
+        .file-info { font-size: 0.85rem; color: #059669; margin-top: 0.5rem; font-weight: bold; }
+        
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; height: auto; position: relative; }
+            .main-content { margin-left: 0; }
+            .mobile-menu-toggle { display: block; }
+            .layout-2col { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    
+    <script>
+
+        class DBStorage {
+            constructor(dbName = 'InventoryDB', storeName = 'settings') {
+                this.dbName = dbName;
+                this.storeName = storeName;
+                this.db = null;
+            }
+            async init() {
+                if (this.db) return;
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(this.dbName, 1);
+                    request.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains(this.storeName)) {
+                            db.createObjectStore(this.storeName);
+                        }
+                    };
+                    request.onsuccess = (e) => {
+                        this.db = e.target.result;
+                        resolve();
+                    };
+                    request.onerror = (e) => reject(e.target.error);
+                });
+            }
+            async get(key) {
+                await this.init();
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([this.storeName], 'readonly');
+                    const store = transaction.objectStore(this.storeName);
+                    const request = store.get(key);
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            async set(key, value) {
+                await this.init();
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([this.storeName], 'readwrite');
+                    const store = transaction.objectStore(this.storeName);
+                    const request = store.put(value, key);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            async remove(key) {
+                await this.init();
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([this.storeName], 'readwrite');
+                    const store = transaction.objectStore(this.storeName);
+                    const request = store.delete(key);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            }
+        }
+        class InventoryApp {
+            constructor() {
+                this.currentUser = null;
+                this.inventory = [];
+                this.transactions = [];
+                this.announcements = [];
+                this.repairs = [];
+                this.users = [
+                    { id: 1, username: 'admin', password: '1234', role: 'admin', name: '管理員', permissions: ['all'] }
+                ];
+                this.eventColors = [
+                    { id: 0, name: '重要', color: '#ef4444' },
+                    { id: 1, name: '待辦', color: '#f59e0b' },
+                    { id: 2, name: '進行中', color: '#3b82f6' },
+                    { id: 3, name: '已完成', color: '#10b981' },
+                    { id: 4, name: '其他', color: '#8b5cf6' }
+                ];
+                this.currentMonth = new Date();
+                this.selectedDate = null;
+                // 選單包含異動紀錄 (audit)
+                this.menuOrder = ['inventory', 'import', 'inout', 'transactions', 'announcements', 'repairs', 'audit', 'users', 'settings'];
+                this.enabledFeatures = {
+                    'inventory': true, 'import': true, 'inout': true, 'transactions': true,
+                    'announcements': true, 'repairs': true, 'audit': true, 'users': true, 'settings': true
+                };
+                this.customization = {
+                    appTitle: '庫存與維修管理系統',
+                    loginTitle: '庫存與維修管理系統',
+                    logoUrl: '',
+                    primaryColor: '#667eea',
+                    // 選單名稱自定義
+                    menuLabels: {}
+                };
+                this.repairHeaders = [];
+                this.repairColumnWidths = {};
+                this.auditLog = [];
+                // 追蹤最近匯入時間與更新者
+                this.lastInventoryImport = { timestamp: null, user: null };
+                this.lastRepairImport = { timestamp: null, user: null };
+                this.storage = new DBStorage();
+            }
+            
+            // 取得選單顯示名稱（支援自定義）
+            getMenuLabel(page) {
+                const defaults = {
+                    'inventory': '庫存表',
+                    'import': '庫存表匯入',
+                    'inout': '出入庫功能',
+                    'transactions': '出入庫紀錄',
+                    'announcements': '公告事項',
+                    'repairs': '維修紀錄',
+                    'audit': '異動紀錄',
+                    'users': '使用者管理',
+                    'settings': '系統管理'
+                };
+                const icons = {
+                    'inventory': '📊',
+                    'import': '📥',
+                    'inout': '🔄',
+                    'transactions': '📋',
+                    'announcements': '📢',
+                    'repairs': '🔧',
+                    'audit': '📝',
+                    'users': '👥',
+                    'settings': '⚙️'
+                };
+                const label = (this.customization.menuLabels && this.customization.menuLabels[page]) || defaults[page] || page;
+                return { icon: icons[page] || '', label, full: `${icons[page] || ''} ${label}` };
+            }
+
+            async init() {
+                const saved = await this.storage.get('currentUser');
+                if (saved) {
+                    this.currentUser = typeof saved === 'string' ? JSON.parse(saved) : saved;
+                    await this.loadData();
+                    await this.showMainApp();
+                } else {
+                    await this.showLoginPage();
+                }
+            }
+            
+            async loadData() {
+                const keys = ['inventory', 'transactions', 'announcements', 'repairs', 'users', 'menuOrder', 'enabledFeatures', 'customization', 'auditLog', 'repairColumnVisible', 'repairDateRangeCols', 'repairColumnWidths', 'lastInventoryImport', 'lastRepairImport'];
+                for (const key of keys) {
+                    const data = await this.storage.get(key);
+                    if (data) this[key] = typeof data === 'string' ? JSON.parse(data) : data;
+                }
+                // 確保 menuOrder 包含 audit
+                if (!this.menuOrder.includes('audit')) {
+                    const usersIdx = this.menuOrder.indexOf('users');
+                    if (usersIdx >= 0) this.menuOrder.splice(usersIdx, 0, 'audit');
+                    else this.menuOrder.push('audit');
+                }
+                // 確保 enabledFeatures 包含 audit
+                if (this.enabledFeatures['audit'] === undefined) this.enabledFeatures['audit'] = true;
+                // 確保 customization.menuLabels 存在
+                if (!this.customization.menuLabels) this.customization.menuLabels = {};
+                // 確保 repairColumnWidths 存在
+                if (!this.repairColumnWidths) this.repairColumnWidths = {};
+            }
+            
+            async saveData() {
+                await this.storage.set('inventory', this.inventory);
+                await this.storage.set('transactions', this.transactions);
+                await this.storage.set('announcements', this.announcements);
+                await this.storage.set('repairs', this.repairs);
+                await this.storage.set('users', this.users);
+                await this.storage.set('menuOrder', this.menuOrder);
+                await this.storage.set('enabledFeatures', this.enabledFeatures);
+                await this.storage.set('customization', this.customization);
+                await this.storage.set('auditLog', this.auditLog);
+                if (this.repairColumnVisible) await this.storage.set('repairColumnVisible', this.repairColumnVisible);
+                if (this.repairDateRangeCols) await this.storage.set('repairDateRangeCols', this.repairDateRangeCols);
+                if (this.repairColumnWidths) await this.storage.set('repairColumnWidths', this.repairColumnWidths);
+                if (this.lastInventoryImport) await this.storage.set('lastInventoryImport', this.lastInventoryImport);
+                if (this.lastRepairImport) await this.storage.set('lastRepairImport', this.lastRepairImport);
+            }
+            
+            async addAuditLog(action, details) {
+                this.auditLog.push({
+                    timestamp: new Date().toLocaleString('zh-TW'),
+                    user: this.currentUser ? (this.currentUser.name || this.currentUser.username) : '系統',
+                    username: this.currentUser ? this.currentUser.username : 'system',
+                    action: action,
+                    details: details
+                });
+                await this.saveData();
+            }
+            
+            async showLoginPage() {
+                document.getElementById('app').innerHTML = `
+                    <div class="login-container">
+                        <div class="login-box">
+                            <div class="login-title">${this.customization.loginTitle}</div>
+                            <div class="login-subtitle">請輸入您的帳號密碼</div>
+                            <form id="loginForm">
+                                <div class="form-group">
+                                    <input type="text" id="username" class="form-input" placeholder="帳號" required>
+                                </div>
+                                <div class="form-group">
+                                    <input type="password" id="password" class="form-input" placeholder="密碼" required>
+                                </div>
+                                <button type="submit" class="login-btn">登入</button>
+                            </form>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const username = document.getElementById('username').value;
+                    const password = document.getElementById('password').value;
+                    
+                    if (username === 'admin' && password === '1234') {
+                        this.currentUser = { id: 1, username: 'admin', role: 'admin', permissions: ['all'], name: '管理員' };
+                        await this.storage.set('currentUser', this.currentUser);
+                        await this.loadData();
+                        await this.showMainApp();
+                        return;
+                    }
+                    
+                    const user = this.users.find(u => u.username === username && u.password === password);
+                    if (user) {
+                        this.currentUser = { id: user.id, username: user.username, role: user.role, permissions: user.permissions, name: user.name };
+                        await this.storage.set('currentUser', this.currentUser);
+                        await this.loadData();
+                        await this.showMainApp();
+                    } else {
+                        this.showToast('帳號或密碼錯誤', true);
+                    }
+                });
+            }
+            
+            async showMainApp() {
+                const defaultPage = this.menuOrder.find(p => this.enabledFeatures[p]) || 'inventory';
+                
+                const menuItems = this.menuOrder.map(page => {
+                    const isDisabled = !this.enabledFeatures[page];
+                    // 異動紀錄需要 audit 權限（管理員或有 audit 權限者）
+                    const needsAuditPerm = page === 'audit';
+                    const canAccess = !needsAuditPerm || this.hasPermission('audit');
+                    if (!canAccess) return '';
+                    const { full } = this.getMenuLabel(page);
+                    return `<div class="menu-item ${page === defaultPage ? 'active' : ''} ${isDisabled ? 'disabled' : ''}" data-page="${page}" ${isDisabled ? 'style="pointer-events: none;"' : ''}>
+                        <span>${full}</span>
+                        <span class="menu-drag-handle">⋮</span>
+                    </div>`;
+                }).join('');
+                
+                const displayName = this.currentUser.name || this.currentUser.username;
+                
+                document.getElementById('app').innerHTML = `
+                    <div class="app-container">
+                        <div class="sidebar" id="sidebar">
+                            <div class="sidebar-header">${this.customization.appTitle}</div>
+                            <div class="sidebar-menu" id="sidebarMenu">
+                                ${menuItems}
+                            </div>
+                            <button class="logout-btn">登出</button>
+                        </div>
+                        <div class="main-content">
+                            <div class="header">
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <button class="mobile-menu-toggle">☰</button>
+                                    <div class="header-title" id="pageTitle">${this.getMenuLabel(defaultPage).label}</div>
+                                </div>
+                                <div>歡迎 ${displayName}</div>
+                            </div>
+                            <div class="content" id="mainContent">
+                                ${this.renderPage(defaultPage)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                await this.attachEventListeners();
+            }
+            
+            renderPage(page) {
+                switch(page) {
+                    case 'inventory': return this.renderInventoryPage();
+                    case 'import': return this.renderImportPage();
+                    case 'inout': return this.renderInOutPage();
+                    case 'transactions': return this.renderTransactionsPage();
+                    case 'announcements': return this.renderAnnouncementsPage();
+                    case 'repairs': return this.renderRepairsPage();
+                    case 'audit': return this.renderAuditPage();
+                    case 'users': return this.renderUsersPage();
+                    case 'settings': return this.renderSettingsPage();
+                    default: return `<div class="page-content"><h2>${page}</h2></div>`;
+                }
+            }
+            
+            renderInventoryPage() {
+                const lastImport = this.lastInventoryImport;
+                const importInfo = lastImport && lastImport.timestamp ? 
+                    `<div style="background: #f0f4ff; padding: 0.75rem; border-radius: 5px; margin-bottom: 1rem; font-size: 0.9rem; color: #666;">
+                        <strong>最近匯入：</strong>${lastImport.timestamp} | <strong>更新者：</strong>${lastImport.user || '系統'}
+                    </div>` : '';
+                return `
+                    <div class="page-content">
+                        <h2>庫存表 (共 ${this.inventory.length} 筆)</h2>
+                        ${importInfo}
+                        <div class="search-box">
+                            <input type="text" id="searchInput" class="search-input" placeholder="搜尋料號或物料說明...">
+                            <button class="search-btn" id="searchBtn">搜尋</button>
+                            <button class="btn" id="clearSearchBtn">清空</button>
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>料號</th>
+                                        <th>物料說明</th>
+                                        <th>庫存量</th>
+                                        <th>計量單位</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inventoryTable">
+                                    ${this.inventory.map(item => `
+                                        <tr>
+                                            <td>${item.partNumber}</td>
+                                            <td>${item.description}</td>
+                                            <td><strong>${item.quantity}</strong></td>
+                                            <td>${item.unit}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // =============================================
+            // 庫存表匯入頁面（整合庫存表 + 維修紀錄匯入）
+            // =============================================
+            renderImportPage() {
+                return `
+                    <div class="page-content">
+                        <h2>${this.getMenuLabel('import').label}</h2>
+                        
+                        <!-- 庫存表匯入區塊 -->
+                        <div class="import-section">
+                            <div class="import-section-header">
+                                <h3>📊 庫存表匯入</h3>
+                            </div>
+                            <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">請選擇庫存表 CSV 檔案後，點選「執行匯入」按鈕上傳。</p>
+                            <div class="upload-area" id="inventoryUploadArea" style="margin-bottom: 0.75rem;">
+                                <p>拖放 CSV 檔案到此或點擊選擇</p>
+                                <input type="file" id="fileInput" style="display: none;" accept=".csv">
+                            </div>
+                            <div id="inventoryFileInfo" class="file-info"></div>
+                            <div style="margin-top: 1rem;">
+                                <button class="btn success" id="executeInventoryImportBtn" disabled style="opacity: 0.5;">▶ 執行匯入</button>
+                                <button class="btn" id="clearInventoryFileBtn" style="margin-left: 0.5rem; background: #6b7280; display: none;">✕ 清除選擇</button>
+                            </div>
+                            <div id="importPreview" style="margin-top: 1rem;"></div>
+                        </div>
+                        
+                        <!-- 維修紀錄匯入區塊 -->
+                        <div class="import-section">
+                            <div class="import-section-header">
+                                <h3>🔧 維修紀錄匯入</h3>
+                            </div>
+                            <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">請選擇維修紀錄 CSV 檔案後，點選「執行匯入」按鈕上傳。</p>
+                            <div class="upload-area" id="repairUploadAreaImport" style="margin-bottom: 0.75rem;">
+                                <p>拖放 CSV 檔案到此或點擊選擇</p>
+                                <input type="file" id="repairFileInputImport" style="display: none;" accept=".csv">
+                            </div>
+                            <div id="repairFileInfo" class="file-info"></div>
+                            <div style="margin-top: 1rem;">
+                                <button class="btn success" id="executeRepairImportBtn" disabled style="opacity: 0.5;">▶ 執行匯入</button>
+                                <button class="btn" id="clearRepairFileBtn" style="margin-left: 0.5rem; background: #6b7280; display: none;">✕ 清除選擇</button>
+                            </div>
+                            <div id="repairImportPreview" style="margin-top: 1rem;"></div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            renderInOutPage() {
+                return `
+                    <div class="page-content">
+                        <h2>出入庫功能</h2>
+                        <div class="form-row full">
+                            <div class="form-group-item">
+                                <label>料號</label>
+                                <input type="text" id="partNumberInput" placeholder="輸入或選擇料號...">
+                                <div id="partSuggestions" style="border: 1px solid #ddd; border-radius: 5px; max-height: 150px; overflow-y: auto; display: none; margin-top: 0.5rem;"></div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group-item">
+                                <label>物料說明</label>
+                                <input type="text" id="descriptionInput" readonly>
+                            </div>
+                            <div class="form-group-item">
+                                <label>計量單位</label>
+                                <input type="text" id="unitInput" readonly>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group-item">
+                                <label>當前庫存</label>
+                                <input type="text" id="currentQtyInput" readonly>
+                            </div>
+                            <div class="form-group-item">
+                                <label>操作類型</label>
+                                <select id="opTypeSelect">
+                                    <option value="in">入庫</option>
+                                    <option value="out">出庫</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group-item">
+                                <label>操作數量</label>
+                                <input type="number" id="opQtyInput" value="1" min="1">
+                            </div>
+                            <div class="form-group-item">
+                                <label>備註</label>
+                                <input type="text" id="remarksInput">
+                            </div>
+                        </div>
+                        <button class="btn success" id="executeBtn" style="width: 100%;">執行操作</button>
+                        
+                        <h3 style="margin-top: 2rem;">最近操作紀錄</h3>
+                        <div style="overflow-x: auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>時間</th>
+                                        <th>料號</th>
+                                        <th>類型</th>
+                                        <th>數量</th>
+                                        <th>使用者</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${this.transactions.slice(-10).reverse().map(t => `
+                                        <tr>
+                                            <td>${t.timestamp}</td>
+                                            <td>${t.partNumber}</td>
+                                            <td>${t.type === 'in' ? '入庫' : '出庫'}</td>
+                                            <td>${t.quantity}</td>
+                                            <td>${t.user}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            renderTransactionsPage() {
+                return `
+                    <div class="page-content">
+                        <h2>出入庫紀錄查詢</h2>
+                        <div class="search-box">
+                            <input type="date" id="startDateInput">
+                            <input type="date" id="endDateInput">
+                            <input type="text" id="transSearchInput" placeholder="搜尋料號...">
+                            <button class="btn" id="transSearchBtn">搜尋</button>
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>時間</th>
+                                        <th>料號</th>
+                                        <th>物料說明</th>
+                                        <th>類型</th>
+                                        <th>數量</th>
+                                        <th>使用者</th>
+                                        <th>備註</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transTable">
+                                    ${this.transactions.map(t => `
+                                        <tr>
+                                            <td>${t.timestamp}</td>
+                                            <td>${t.partNumber}</td>
+                                            <td>${t.description}</td>
+                                            <td>${t.type === 'in' ? '入庫' : '出庫'}</td>
+                                            <td>${t.quantity}</td>
+                                            <td>${t.user}</td>
+                                            <td>${t.remarks || '-'}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            renderAnnouncementsPage() {
+                const colors = this.eventColors;
+                const getLocalDateStr = (d) => {
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${day}`;
+                };
+                const currentDate = this.selectedDate ? new Date(this.selectedDate + 'T00:00:00') : new Date();
+                const dateStr = getLocalDateStr(currentDate);
+                const todayAnnouncements = this.announcements.filter(a => a.date === dateStr && a.type === 'announcement');
+                const todayTodos = this.announcements.filter(a => a.date === dateStr && a.type === 'todo');
+                
+                return `
+                    <div class="layout-2col">
+                        <div>
+                            <div class="page-content">
+                                <h2>公告事項</h2>
+                                <div id="announcementsList" style="max-height: 300px; overflow-y: auto; margin-bottom: 1rem;">
+                                    ${this.announcements.filter(a => a.type === 'announcement').map((a, i) => `
+                                        <div style="padding: 0.75rem; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
+                                            <div>
+                                                <strong>${a.title}</strong><br>
+                                                <small style="color: #666;">${a.date} - ${a.user || a.username || '-'}</small>
+                                            </div>
+                                            ${this.hasPermission('announcements') ? `<button class="btn danger small" onclick="app.deleteAnnouncement(${i})">刪除</button>` : ''}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                
+                                <h3>新增公告</h3>
+                                <div class="form-row full">
+                                    <div class="form-group-item">
+                                        <label>標題</label>
+                                        <input type="text" id="announcementTitleInput" placeholder="輸入公告標題...">
+                                    </div>
+                                </div>
+                                <div class="form-row full">
+                                    <div class="form-group-item">
+                                        <label>內容</label>
+                                        <textarea id="announcementContentInput" rows="3" placeholder="輸入公告內容..."></textarea>
+                                    </div>
+                                </div>
+                                <button class="btn success" id="addAnnouncementBtn" style="width: 100%;">新增公告</button>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="page-content">
+                                <h2>月行事曆</h2>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                    <button class="btn small" id="prevMonthBtn">◀ 上月</button>
+                                    <span id="monthDisplay" style="font-weight: bold;"></span>
+                                    <button class="btn small" id="nextMonthBtn">下月 ▶</button>
+                                </div>
+                                <div id="calendarContainer"></div>
+                                
+                                <h3 style="margin-top: 1.5rem;">當日待辦事項 (${dateStr})</h3>
+                                <div id="todayTodosList" style="max-height: 200px; overflow-y: auto; margin-bottom: 1rem;">
+                                    ${todayTodos.map((t, i) => `
+                                        <div style="padding: 0.75rem; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
+                                            <div>
+                                                <span style="display: inline-block; width: 12px; height: 12px; background: ${colors[t.color].color}; border-radius: 2px; margin-right: 0.5rem;"></span>
+                                                <strong>${t.title}</strong>
+                                                <span style="font-size: 0.8rem; color: #888; margin-left: 0.5rem;">— ${t.user || t.username || '-'}</span><br>
+                                                <small style="color: #666;">${t.content || '無內容'}</small>
+                                            </div>
+                                            ${this.hasPermission('announcements') ? `<button class="btn danger small" onclick="app.deleteTodo(${this.announcements.indexOf(t)})">刪除</button>` : ''}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                
+                                <h3>新增待辦事項</h3>
+                                <div class="form-row full">
+                                    <div class="form-group-item">
+                                        <label>日期</label>
+                                        <input type="date" id="todoDateInput" value="${dateStr}">
+                                    </div>
+                                </div>
+                                <div class="form-row full">
+                                    <div class="form-group-item">
+                                        <label>事項標題</label>
+                                        <input type="text" id="todoTitleInput" placeholder="輸入待辦事項...">
+                                    </div>
+                                </div>
+                                <div class="form-row full">
+                                    <div class="form-group-item">
+                                        <label>事項內容</label>
+                                        <textarea id="todoContentInput" rows="2" placeholder="輸入詳細內容..."></textarea>
+                                    </div>
+                                </div>
+                                <div class="form-row full">
+                                    <div class="form-group-item">
+                                        <label>分類顏色</label>
+                                        <div class="checkbox-group">
+                                            ${colors.map(c => `
+                                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                                    <input type="radio" name="todoColor" value="${c.id}" ${c.id === 0 ? 'checked' : ''}>
+                                                    <span style="display: inline-block; width: 16px; height: 16px; background: ${c.color}; border-radius: 3px;"></span>
+                                                    ${c.name}
+                                                </label>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="btn success" id="addTodoBtn" style="width: 100%;">新增待辦事項</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            renderRepairsPage() {
+                const lastImport = this.lastRepairImport;
+                const importInfo = lastImport && lastImport.timestamp ? 
+                    `<div style="background: #f0f4ff; padding: 0.75rem; border-radius: 5px; margin-bottom: 1rem; font-size: 0.9rem; color: #666;">
+                        <strong>最近匯入：</strong>${lastImport.timestamp} | <strong>更新者：</strong>${lastImport.user || '系統'}
+                    </div>` : '';
+                const headers = this.repairHeaders.length > 0 ? this.repairHeaders : ['維修單編號', '申請人', '申請單位', '設備名稱', '故障說明', '完工日期'];
+                if (!this.repairColumnVisible) {
+                    this.repairColumnVisible = {};
+                    headers.forEach((h, i) => { this.repairColumnVisible[i] = true; });
+                }
+                headers.forEach((h, i) => {
+                    if (this.repairColumnVisible[i] === undefined) this.repairColumnVisible[i] = true;
+                });
+                const visibleHeaders = headers.filter((h, i) => this.repairColumnVisible[i] !== false);
+                const visibleIndices = headers.map((h, i) => i).filter(i => this.repairColumnVisible[i] !== false);
+                const dateRangeCols = this.repairDateRangeCols || [3, 6];
+                const colWidths = this.repairColumnWidths || {};
+                
+                return `
+                    <div class="page-content">
+                        <h2>${this.getMenuLabel('repairs').label}</h2>
+                        ${importInfo}
+                        <h3>搜尋維修紀錄</h3>
+                        <div id="repairSearchContainer" style="margin-bottom: 1.5rem;">
+                            ${headers.map((h, i) => {
+                                if (this.repairColumnVisible[i] === false) return '';
+                                if (dateRangeCols.includes(i)) {
+                                    return `
+                                        <div style="margin-bottom: 0.75rem;">
+                                            <label>${h}（日期範圍）</label>
+                                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                                <input type="date" class="repair-date-start" data-index="${i}" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 5px;">
+                                                <span>～</span>
+                                                <input type="date" class="repair-date-end" data-index="${i}" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 5px;">
+                                            </div>
+                                        </div>
+                                    `;
+                                }
+                                return `
+                                    <div style="margin-bottom: 0.75rem;">
+                                        <label>${h}</label>
+                                        <input type="text" class="repair-search-input" data-index="${i}" placeholder="搜尋 ${h}..." style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 5px;">
+                                    </div>
+                                `;
+                            }).join('')}
+                            <button class="btn" id="repairSearchBtn">搜尋</button>
+                            <button class="btn" id="repairResetBtn" style="margin-left: 0.5rem; background: #6b7280;">重置</button>
+                        </div>
+                        
+                        <div style="overflow-x: auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        ${visibleHeaders.map((h, idx) => {
+                                            const vi = visibleIndices[idx];
+                                            const w = colWidths[vi] ? `style="width: ${colWidths[vi]}px; min-width: ${colWidths[vi]}px;"` : '';
+                                            return `<th ${w}>${h}</th>`;
+                                        }).join('')}
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="repairsTable">
+                                    ${this.repairs.map((r, i) => `
+                                        <tr>
+                                            ${visibleIndices.map(vi => `<td>${r[headers[vi]] !== undefined ? r[headers[vi]] : (Object.values(r)[vi] || '')}</td>`).join('')}
+                                            <td><button class="btn danger small" onclick="app.deleteRepair(${i})">刪除</button></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // =============================================
+            // 異動紀錄頁面（獨立頁面，需 audit 權限）
+            // =============================================
+            renderAuditPage() {
+                if (!this.hasPermission('audit')) {
+                    return `<div class="page-content"><p>您沒有查閱異動紀錄的權限。</p></div>`;
+                }
+                const logs = [...this.auditLog].reverse();
+                return `
+                    <div class="page-content">
+                        <h2>${this.getMenuLabel('audit').label}</h2>
+                        <div style="overflow-x: auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>時間</th>
+                                        <th>使用者</th>
+                                        <th>操作</th>
+                                        <th>詳情</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${logs.map(log => `
+                                        <tr>
+                                            <td>${log.timestamp}</td>
+                                            <td>${log.user || log.username || '-'}</td>
+                                            <td>${log.action}</td>
+                                            <td>${log.details}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            renderUsersPage() {
+                if (this.currentUser.role !== 'admin') {
+                    return `<div class="page-content"><p>只有管理員可以訪問此頁面</p></div>`;
+                }
+                
+                // 取得異動紀錄的實際顯示名稱
+                const auditLabel = this.getMenuLabel('audit').label;
+                
+                return `
+                    <div class="page-content">
+                        <h2>使用者管理</h2>
+                        <button class="btn success" id="addUserBtn" style="margin-bottom: 1.5rem;">➕ 新增使用者</button>
+                        
+                        <div style="overflow-x: auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>使用者名稱</th>
+                                        <th>帳號</th>
+                                        <th>角色</th>
+                                        <th>權限</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${this.users.map(u => {
+                                        const permLabels = this.getPermissionLabels(u.permissions);
+                                        return `
+                                        <tr>
+                                            <td>${u.name || u.username}</td>
+                                            <td>${u.username}</td>
+                                            <td>${u.role}</td>
+                                            <td>${permLabels || '查詢'}</td>
+                                            <td>
+                                                ${u.username !== 'admin' ? `<button class="btn small" onclick="app.showEditUserModal(${u.id})">修改</button> <button class="btn danger small" onclick="app.deleteUser(${u.id})">刪除</button>` : '受保護'}
+                                            </td>
+                                        </tr>`;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // 取得權限的顯示名稱（連動選單自定義名稱）
+            getPermissionLabels(permissions) {
+                if (!permissions || permissions.length === 0) return '';
+                if (permissions.includes('all')) return '全部權限';
+                const map = {
+                    'inventory': '編輯庫存表',
+                    'inout': '編輯出入庫',
+                    'repairs': '編輯維修紀錄',
+                    'announcements': '編輯公告事項',
+                    'audit': `查閱${this.getMenuLabel('audit').label}`
+                };
+                return permissions.map(p => map[p] || p).join(', ');
+            }
+            
+            renderSettingsPage() {
+                if (this.currentUser.role !== 'admin') {
+                    return `<div class="page-content"><p>只有管理員可以訪問此頁面</p></div>`;
+                }
+                
+                const auditLabel = this.getMenuLabel('audit').label;
+                
+                return `
+                    <div class="page-content">
+                        <div class="tab-container">
+                            <div class="tab active" data-tab="overview">概覽</div>
+                            <div class="tab" data-tab="features">功能設定</div>
+                            <div class="tab" data-tab="repair-columns">維修紀錄欄位設定</div>
+                            <div class="tab" data-tab="customize">自定義</div>
+                            <div class="tab" data-tab="data">資料管理</div>
+                        </div>
+                        
+                        <div id="overview" class="tab-content active">
+                            <h3>系統統計</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                                <div style="background: #e8ecff; padding: 1.5rem; border-radius: 5px; text-align: center;">
+                                    <div style="font-size: 2rem; font-weight: bold; color: #667eea;">${this.inventory.length}</div>
+                                    <div>庫存物料</div>
+                                </div>
+                                <div style="background: #e8ecff; padding: 1.5rem; border-radius: 5px; text-align: center;">
+                                    <div style="font-size: 2rem; font-weight: bold; color: #667eea;">${this.transactions.length}</div>
+                                    <div>出入庫紀錄</div>
+                                </div>
+                                <div style="background: #e8ecff; padding: 1.5rem; border-radius: 5px; text-align: center;">
+                                    <div style="font-size: 2rem; font-weight: bold; color: #667eea;">${this.repairs.length}</div>
+                                    <div>維修紀錄</div>
+                                </div>
+                                <div style="background: #e8ecff; padding: 1.5rem; border-radius: 5px; text-align: center;">
+                                    <div style="font-size: 2rem; font-weight: bold; color: #667eea;">${this.users.length}</div>
+                                    <div>使用者</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="features" class="tab-content">
+                            <h3>功能開啟/關閉</h3>
+                            <div class="checkbox-group">
+                                ${this.menuOrder.map(page => {
+                                    const { label } = this.getMenuLabel(page);
+                                    return `
+                                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <input type="checkbox" data-feature="${page}" ${this.enabledFeatures[page] ? 'checked' : ''}>
+                                            ${label}
+                                        </label>
+                                    `;
+                                }).join('')}
+                            </div>
+                            
+                            <h3 style="margin-top: 1.5rem;">選單排序</h3>
+                            <div id="menuOrderContainer">
+                                ${this.menuOrder.map((page, i) => {
+                                    const { full } = this.getMenuLabel(page);
+                                    return `
+                                        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                            <button class="btn small" onclick="app.moveMenuUp(${i})">▲</button>
+                                            <button class="btn small" onclick="app.moveMenuDown(${i})">▼</button>
+                                            <span style="flex: 1; padding: 0.5rem; background: #f5f5f5; border-radius: 5px;">${full}</span>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                        
+                        <div id="repair-columns" class="tab-content">
+                            <h3>維修紀錄欄位顯示設定</h3>
+                            <p style="color: #666; margin-bottom: 1rem; font-size: 0.9rem;">勾選要顯示的欄位，取消勾選則隱藏該欄位（包括搜尋列）。欄寬留空則自動。</p>
+                            <div id="repairColumnsContainer">
+                                ${(() => {
+                                    const headers = this.repairHeaders.length > 0 ? this.repairHeaders : ['維修單編號', '申請人', '申請單位', '設備名稱', '故障說明', '完工日期'];
+                                    if (!this.repairColumnVisible) {
+                                        this.repairColumnVisible = {};
+                                        headers.forEach((h, i) => { this.repairColumnVisible[i] = true; });
+                                    }
+                                    headers.forEach((h, i) => {
+                                        if (this.repairColumnVisible[i] === undefined) this.repairColumnVisible[i] = true;
+                                    });
+                                    const colWidths = this.repairColumnWidths || {};
+                                    const colLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                                    const getDefaultWidth = (content) => {
+                                        const len = (content || '').length;
+                                        if (len < 5) return 60;
+                                        if (len < 10) return 100;
+                                        if (len < 15) return 150;
+                                        return Math.min(200, 60 + len * 8);
+                                    };
+                                    return headers.map((h, i) => {
+                                        const letter = i < 26 ? colLetters[i] : colLetters[Math.floor(i/26)-1] + colLetters[i%26];
+                                        const isVisible = this.repairColumnVisible[i] !== false;
+                                        const currentWidth = colWidths[i];
+                                        const defaultWidth = getDefaultWidth(h);
+                                        const displayWidth = currentWidth || '自動';
+                                        const displayDefault = currentWidth ? `(預設: ${defaultWidth}px)` : '';
+                                        return `
+                                            <div class="repair-col-row" style="background: ${isVisible ? '#fff' : '#f9f9f9'}; opacity: ${isVisible ? '1' : '0.7'};">
+                                                <input type="checkbox" class="repair-col-toggle" data-col-index="${i}" ${isVisible ? 'checked' : ''}>
+                                                <span style="font-weight: bold; color: #667eea; min-width: 2rem;">${letter}</span>
+                                                <span style="flex: 1; font-size: 0.95rem;">${h}</span>
+                                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                    <label style="font-size: 0.85rem; color: #666; white-space: nowrap;">寬度(px)：</label>
+                                                    <input type="number" class="repair-col-width" data-col-index="${i}" value="${currentWidth || ''}" placeholder="自動" min="30" max="500" style="width: 70px;">
+                                                    <span style="font-size: 0.8rem; color: #999; min-width: 120px;">${displayWidth} ${displayDefault}</span>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('');
+                                })()} 
+                            </div>
+                            <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                                <button class="btn success" id="saveRepairColumnsBtn">儲存欄位設定</button>
+                                <button class="btn" id="showAllRepairColumnsBtn" style="background: #6b7280;">全部顯示</button>
+                            </div>
+                        </div>
+                        
+                        <div id="customize" class="tab-content">
+                            <h3>網站自定義</h3>
+                            <div class="form-row full">
+                                <div class="form-group-item">
+                                    <label>應用程式標題</label>
+                                    <input type="text" id="appTitleInput" value="${this.customization.appTitle}" maxlength="50">
+                                    <small style="color: #666;">字元上限：50</small>
+                                </div>
+                            </div>
+                            <div class="form-row full">
+                                <div class="form-group-item">
+                                    <label>登入頁標題</label>
+                                    <input type="text" id="loginTitleInput" value="${this.customization.loginTitle}" maxlength="50">
+                                    <small style="color: #666;">字元上限：50</small>
+                                </div>
+                            </div>
+                            <div class="form-row full">
+                                <div class="form-group-item">
+                                    <label>Logo 圖片 URL</label>
+                                    <input type="text" id="logoUrlInput" value="${this.customization.logoUrl}" placeholder="輸入圖片 URL...">
+                                    <small style="color: #666;">建議尺寸：200x200 像素，支援 PNG/JPG</small>
+                                </div>
+                            </div>
+                            
+                            <h3 style="margin-top: 1.5rem;">選單名稱修改</h3>
+                            <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">可自訂各選單項目的顯示名稱，留空則使用預設名稱。</p>
+                            <div id="menuLabelContainer">
+                                ${this.menuOrder.map(page => {
+                                    const defaults = {
+                                        'inventory': '庫存表', 'import': '庫存表匯入', 'inout': '出入庫功能',
+                                        'transactions': '出入庫紀錄', 'announcements': '公告事項', 'repairs': '維修紀錄',
+                                        'audit': '異動紀錄', 'users': '使用者管理', 'settings': '系統管理'
+                                    };
+                                    const current = (this.customization.menuLabels && this.customization.menuLabels[page]) || '';
+                                    return `
+                                        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                                            <label style="min-width: 100px; font-size: 0.9rem; color: #666;">預設：${defaults[page]}</label>
+                                            <input type="text" class="menu-label-input" data-page="${page}" value="${current}" placeholder="${defaults[page]}" style="flex: 1; padding: 0.5rem; border: 1px solid #ddd; border-radius: 5px;">
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                            
+                            <button class="btn success" id="saveCustomizationBtn" style="width: 100%; margin-top: 1rem;">保存自定義設定</button>
+                        </div>
+                        
+                        <div id="data" class="tab-content">
+                            <h3>資料清空</h3>
+                            <button class="btn danger" id="clearInventoryBtn" style="margin-right: 1rem; margin-bottom: 0.5rem;">清空庫存表</button>
+                            <button class="btn danger" id="clearTransactionsBtn" style="margin-right: 1rem; margin-bottom: 0.5rem;">清空出入庫紀錄</button>
+                            <button class="btn danger" id="clearRepairsBtn" style="margin-right: 1rem; margin-bottom: 0.5rem;">清空維修紀錄</button>
+                            <button class="btn danger" id="clearAuditBtn" style="margin-right: 1rem; margin-bottom: 0.5rem;">清空異動紀錄</button>
+                            <button class="btn danger" id="clearAllBtn" style="margin-bottom: 0.5rem;">清空所有資料</button>
+                            <p style="margin-top: 1rem; font-size: 0.9rem; color: #666;">⚠️ 此操作無法復原，請謹慎使用</p>
+                            
+                            <h3 style="margin-top: 2rem;">資料匯出</h3>
+                            <button class="btn" id="exportDataBtn">📥 匯出資料 (JSON)</button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            async attachEventListeners() {
+                document.querySelectorAll('.menu-item:not(.disabled)').forEach(item => {
+                    item.addEventListener('click', async (e) => {
+                        if (e.target.classList.contains('menu-drag-handle')) return;
+                        document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+                        item.classList.add('active');
+                        const page = item.dataset.page;
+                        document.getElementById('mainContent').innerHTML = this.renderPage(page);
+                        document.getElementById('pageTitle').textContent = this.getMenuLabel(page).label;
+                        await this.attachPageHandlers();
+                    });
+                });
+                
+                document.querySelector('.logout-btn').addEventListener('click', async () => {
+                    if (confirm('確定要登出嗎？')) {
+                        await this.storage.remove('currentUser');
+                        await this.showLoginPage();
+                    }
+                });
+                
+                document.querySelector('.mobile-menu-toggle').addEventListener('click', async () => {
+                    document.getElementById('sidebar').classList.toggle('hidden');
+                });
+                
+                await this.attachPageHandlers();
+            }
+            
+            async attachPageHandlers() {
+                // 庫存表搜尋
+                if (document.getElementById('searchBtn')) {
+                    document.getElementById('searchBtn').addEventListener('click', () => this.searchInventory());
+                    document.getElementById('clearSearchBtn').addEventListener('click', async () => {
+                        document.getElementById('searchInput').value = '';
+                        document.getElementById('inventoryTable').innerHTML = this.inventory.map(item => `
+                            <tr>
+                                <td>${item.partNumber}</td>
+                                <td>${item.description}</td>
+                                <td><strong>${item.quantity}</strong></td>
+                                <td>${item.unit}</td>
+                            </tr>
+                        `).join('');
+                    });
+                }
+                
+                // 庫存表匯入頁面（整合版）
+                if (document.getElementById('inventoryUploadArea')) {
+                    this._pendingInventoryFile = null;
+                    this._pendingRepairFile = null;
+                    
+                    // 庫存表上傳區域
+                    const invArea = document.getElementById('inventoryUploadArea');
+                    const invInput = document.getElementById('fileInput');
+                    invArea.addEventListener('click', () => invInput.click());
+                    invArea.addEventListener('dragover', (e) => { e.preventDefault(); invArea.classList.add('dragover'); });
+                    invArea.addEventListener('dragleave', () => invArea.classList.remove('dragover'));
+                    invArea.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        invArea.classList.remove('dragover');
+                        if (e.dataTransfer.files.length) this._setInventoryFile(e.dataTransfer.files[0]);
+                    });
+                    invInput.addEventListener('change', async (e) => {
+                        if (e.target.files.length) this._setInventoryFile(e.target.files[0]);
+                    });
+                    document.getElementById('executeInventoryImportBtn').addEventListener('click', async () => {
+                        if (this._pendingInventoryFile) this.handleFileUpload(this._pendingInventoryFile);
+                    });
+                    document.getElementById('clearInventoryFileBtn').addEventListener('click', async () => {
+                        this._pendingInventoryFile = null;
+                        document.getElementById('inventoryFileInfo').textContent = '';
+                        document.getElementById('executeInventoryImportBtn').disabled = true;
+                        document.getElementById('executeInventoryImportBtn').style.opacity = '0.5';
+                        document.getElementById('clearInventoryFileBtn').style.display = 'none';
+                        document.getElementById('inventoryUploadArea').classList.remove('file-selected');
+                        document.getElementById('fileInput').value = '';
+                    });
+                    
+                    // 維修紀錄上傳區域
+                    const repArea = document.getElementById('repairUploadAreaImport');
+                    const repInput = document.getElementById('repairFileInputImport');
+                    repArea.addEventListener('click', () => repInput.click());
+                    repArea.addEventListener('dragover', (e) => { e.preventDefault(); repArea.classList.add('dragover'); });
+                    repArea.addEventListener('dragleave', () => repArea.classList.remove('dragover'));
+                    repArea.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        repArea.classList.remove('dragover');
+                        if (e.dataTransfer.files.length) this._setRepairFile(e.dataTransfer.files[0]);
+                    });
+                    repInput.addEventListener('change', async (e) => {
+                        if (e.target.files.length) this._setRepairFile(e.target.files[0]);
+                    });
+                    document.getElementById('executeRepairImportBtn').addEventListener('click', async () => {
+                        if (this._pendingRepairFile) this.handleRepairFileUpload(this._pendingRepairFile);
+                    });
+                    document.getElementById('clearRepairFileBtn').addEventListener('click', async () => {
+                        this._pendingRepairFile = null;
+                        document.getElementById('repairFileInfo').textContent = '';
+                        document.getElementById('executeRepairImportBtn').disabled = true;
+                        document.getElementById('executeRepairImportBtn').style.opacity = '0.5';
+                        document.getElementById('clearRepairFileBtn').style.display = 'none';
+                        document.getElementById('repairUploadAreaImport').classList.remove('file-selected');
+                        document.getElementById('repairFileInputImport').value = '';
+                    });
+                }
+                
+                // 出入庫
+                if (document.getElementById('executeBtn')) {
+                    document.getElementById('partNumberInput').addEventListener('input', () => this.updatePartDetails());
+                    document.getElementById('executeBtn').addEventListener('click', () => this.executeTransaction());
+                }
+                
+                // 公告事項
+                if (document.getElementById('addAnnouncementBtn')) {
+                    document.getElementById('addAnnouncementBtn').addEventListener('click', () => this.addAnnouncement());
+                    document.getElementById('addTodoBtn').addEventListener('click', () => this.addTodo());
+                    document.getElementById('prevMonthBtn').addEventListener('click', () => this.prevMonth());
+                    document.getElementById('nextMonthBtn').addEventListener('click', () => this.nextMonth());
+                    await this.renderCalendar();
+                }
+                
+                // 維修紀錄搜尋
+                if (document.getElementById('repairSearchBtn')) {
+                    document.getElementById('repairSearchBtn').addEventListener('click', () => this.searchRepairs());
+                    if (document.getElementById('repairResetBtn')) {
+                        document.getElementById('repairResetBtn').addEventListener('click', () => this.resetRepairSearch());
+                    }
+                }
+                
+                // 使用者管理
+                if (document.getElementById('addUserBtn')) {
+                    document.getElementById('addUserBtn').addEventListener('click', () => this.showAddUserModal());
+                }
+                
+                // 系統管理
+                if (document.querySelectorAll('.tab').length > 0) {
+                    document.querySelectorAll('.tab').forEach(tab => {
+                        tab.addEventListener('click', async () => {
+                            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                            tab.classList.add('active');
+                            document.getElementById(tab.dataset.tab).classList.add('active');
+                        });
+                    });
+                    
+                    document.querySelectorAll('input[data-feature]').forEach(checkbox => {
+                        checkbox.addEventListener('change', async (e) => {
+                            this.enabledFeatures[e.target.dataset.feature] = e.target.checked;
+                            await this.saveData();
+                            this.showToast(`✅ 功能已${e.target.checked ? '啟用' : '禁用'}`, false);
+                            await this.showMainApp();
+                        });
+                    });
+                    
+                    if (document.getElementById('clearInventoryBtn')) {
+                        document.getElementById('clearInventoryBtn').addEventListener('click', async () => {
+                            if (confirm('確定要清空庫存表嗎？')) {
+                                this.inventory = [];
+                                await this.saveData();
+                                this.addAuditLog('清空庫存表', '已清空所有庫存資料');
+                                this.showToast('✅ 庫存表已清空', false);
+                            }
+                        });
+                    }
+                    
+                    if (document.getElementById('clearTransactionsBtn')) {
+                        document.getElementById('clearTransactionsBtn').addEventListener('click', async () => {
+                            if (confirm('確定要清空出入庫紀錄嗎？')) {
+                                this.transactions = [];
+                                await this.saveData();
+                                this.addAuditLog('清空出入庫紀錄', '已清空所有出入庫紀錄');
+                                this.showToast('✅ 出入庫紀錄已清空', false);
+                            }
+                        });
+                    }
+                    
+                    if (document.getElementById('clearRepairsBtn')) {
+                        document.getElementById('clearRepairsBtn').addEventListener('click', async () => {
+                            if (confirm('確定要清空維修紀錄嗎？')) {
+                                this.repairs = [];
+                                this.repairHeaders = [];
+                                await this.saveData();
+                                this.addAuditLog('清空維修紀錄', '已清空所有維修紀錄');
+                                this.showToast('✅ 維修紀錄已清空', false);
+                            }
+                        });
+                    }
+                    
+                    if (document.getElementById('clearAuditBtn')) {
+                        document.getElementById('clearAuditBtn').addEventListener('click', async () => {
+                            if (confirm('確定要清空異動紀錄嗎？此操作無法復原！')) {
+                                this.auditLog = [];
+                                await this.saveData();
+                                this.showToast('✅ 異動紀錄已清空', false);
+                            }
+                        });
+                    }
+                    
+                    if (document.getElementById('clearAllBtn')) {
+                        document.getElementById('clearAllBtn').addEventListener('click', async () => {
+                            if (confirm('確定要清空所有資料嗎？此操作無法復原！')) {
+                                this.inventory = [];
+                                this.transactions = [];
+                                this.repairs = [];
+                                this.announcements = [];
+                                this.repairHeaders = [];
+                                await this.saveData();
+                                this.addAuditLog('清空所有資料', '已清空所有系統資料');
+                                this.showToast('✅ 所有資料已清空', false);
+                            }
+                        });
+                    }
+                    
+                    if (document.getElementById('exportDataBtn')) {
+                        document.getElementById('exportDataBtn').addEventListener('click', async () => {
+                            const data = {
+                                inventory: this.inventory,
+                                transactions: this.transactions,
+                                repairs: this.repairs,
+                                announcements: this.announcements,
+                                users: this.users,
+                                exportTime: new Date().toLocaleString('zh-TW')
+                            };
+                            const json = JSON.stringify(data, null, 2);
+                            const blob = new Blob([json], { type: 'application/json' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `inventory-export-${new Date().toISOString().split('T')[0]}.json`;
+                            a.click();
+                            this.showToast('✅ 資料已匯出', false);
+                        });
+                    }
+                    
+                    if (document.getElementById('saveCustomizationBtn')) {
+                        document.getElementById('saveCustomizationBtn').addEventListener('click', async () => {
+                            this.customization.appTitle = document.getElementById('appTitleInput').value.substring(0, 50);
+                            this.customization.loginTitle = document.getElementById('loginTitleInput').value.substring(0, 50);
+                            this.customization.logoUrl = document.getElementById('logoUrlInput').value;
+                            // 儲存選單名稱
+                            if (!this.customization.menuLabels) this.customization.menuLabels = {};
+                            document.querySelectorAll('.menu-label-input').forEach(input => {
+                                const page = input.dataset.page;
+                                const val = input.value.trim();
+                                this.customization.menuLabels[page] = val;
+                            });
+                            await this.saveData();
+                            this.addAuditLog('修改自定義設定', '已更新應用程式標題、登入頁標題及選單名稱');
+                            this.showToast('✅ 自定義設定已保存', false);
+                            await this.showMainApp();
+                        });
+                    }
+                    
+                    if (document.getElementById('saveRepairColumnsBtn')) {
+                        document.getElementById('saveRepairColumnsBtn').addEventListener('click', async () => {
+                            if (!this.repairColumnVisible) this.repairColumnVisible = {};
+                            if (!this.repairColumnWidths) this.repairColumnWidths = {};
+                            document.querySelectorAll('.repair-col-toggle').forEach(cb => {
+                                const idx = parseInt(cb.dataset.colIndex);
+                                this.repairColumnVisible[idx] = cb.checked;
+                            });
+                            document.querySelectorAll('.repair-col-width').forEach(input => {
+                                const idx = parseInt(input.dataset.colIndex);
+                                const val = parseInt(input.value);
+                                if (val && val > 0) {
+                                    this.repairColumnWidths[idx] = val;
+                                } else {
+                                    delete this.repairColumnWidths[idx];
+                                }
+                            });
+                            await this.saveData();
+                            this.addAuditLog('修改維修紀錄欄位設定', '已更新欄位顯示設定及欄寬');
+                            this.showToast('✅ 欄位設定已保存', false);
+                        });
+                    }
+                    
+                    if (document.getElementById('showAllRepairColumnsBtn')) {
+                        document.getElementById('showAllRepairColumnsBtn').addEventListener('click', async () => {
+                            document.querySelectorAll('.repair-col-toggle').forEach(cb => cb.checked = true);
+                        });
+                    }
+                }
+            }
+            
+            // 設定待上傳的庫存表檔案
+            _setInventoryFile(file) {
+                this._pendingInventoryFile = file;
+                document.getElementById('inventoryFileInfo').textContent = `已選擇：${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+                document.getElementById('executeInventoryImportBtn').disabled = false;
+                document.getElementById('executeInventoryImportBtn').style.opacity = '1';
+                document.getElementById('clearInventoryFileBtn').style.display = 'inline-block';
+                document.getElementById('inventoryUploadArea').classList.add('file-selected');
+            }
+            
+            // 設定待上傳的維修紀錄檔案
+            _setRepairFile(file) {
+                this._pendingRepairFile = file;
+                document.getElementById('repairFileInfo').textContent = `已選擇：${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+                document.getElementById('executeRepairImportBtn').disabled = false;
+                document.getElementById('executeRepairImportBtn').style.opacity = '1';
+                document.getElementById('clearRepairFileBtn').style.display = 'inline-block';
+                document.getElementById('repairUploadAreaImport').classList.add('file-selected');
+            }
+            
+            async searchInventory() {
+                const keyword = document.getElementById('searchInput').value.toLowerCase();
+                const filtered = this.inventory.filter(item =>
+                    item.partNumber.toLowerCase().includes(keyword) ||
+                    item.description.toLowerCase().includes(keyword)
+                );
+                document.getElementById('inventoryTable').innerHTML = filtered.map(item => `
+                    <tr>
+                        <td>${item.partNumber}</td>
+                        <td>${item.description}</td>
+                        <td><strong>${item.quantity}</strong></td>
+                        <td>${item.unit}</td>
+                    </tr>
+                `).join('');
+            }
+            
+            handleFileUpload(file) {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const content = e.target.result;
+                        const lines = content.split('\n');
+                        const data = [];
+                        
+                        for (let i = 1; i < lines.length; i++) {
+                            if (!lines[i].trim()) continue;
+                            const cells = lines[i].split(',');
+                            if (cells.length >= 4) {
+                                data.push({
+                                    partNumber: cells[0].trim(),
+                                    description: cells[1].trim(),
+                                    quantity: parseInt(cells[2]) || 0,
+                                    unit: cells[3].trim()
+                                });
+                            }
+                        }
+                        
+                        this.inventory = data;
+                        // 記錄匯入時間與更新者
+                        this.lastInventoryImport = {
+                            timestamp: new Date().toLocaleString('zh-TW'),
+                            user: this.currentUser.name || this.currentUser.username
+                        };
+                        await this.saveData();
+                        this.addAuditLog('匯入庫存表', `已匯入 ${data.length} 筆物料資料`);
+                        this.showToast(`✅ 已匯入 ${data.length} 筆物料資料`, false);
+                        document.getElementById('mainContent').innerHTML = this.renderPage('import');
+                        await this.attachPageHandlers();
+                    } catch (error) {
+                        this.showToast('❌ 檔案解析失敗', true);
+                    }
+                };
+                reader.readAsText(file);
+            }
+            
+            async updatePartDetails() {
+                const partNumber = document.getElementById('partNumberInput').value;
+                const item = this.inventory.find(i => i.partNumber === partNumber);
+                if (item) {
+                    document.getElementById('descriptionInput').value = item.description;
+                    document.getElementById('unitInput').value = item.unit;
+                    document.getElementById('currentQtyInput').value = item.quantity;
+                } else {
+                    document.getElementById('descriptionInput').value = '';
+                    document.getElementById('unitInput').value = '';
+                    document.getElementById('currentQtyInput').value = '';
+                }
+            }
+            
+            async executeTransaction() {
+                const partNumber = document.getElementById('partNumberInput').value;
+                const opType = document.getElementById('opTypeSelect').value;
+                const opQty = parseInt(document.getElementById('opQtyInput').value) || 0;
+                const remarks = document.getElementById('remarksInput').value;
+                
+                if (!partNumber || opQty <= 0) {
+                    this.showToast('請輸入有效的料號和數量', true);
+                    return;
+                }
+                
+                const item = this.inventory.find(i => i.partNumber === partNumber);
+                if (!item) {
+                    this.showToast('料號不存在', true);
+                    return;
+                }
+                
+                if (opType === 'out' && item.quantity < opQty) {
+                    this.showToast('庫存不足', true);
+                    return;
+                }
+                
+                if (opType === 'in') {
+                    item.quantity += opQty;
+                } else {
+                    item.quantity -= opQty;
+                }
+                
+                this.transactions.push({
+                    timestamp: new Date().toLocaleString('zh-TW'),
+                    partNumber: partNumber,
+                    description: item.description,
+                    type: opType,
+                    quantity: opQty,
+                    user: this.currentUser.name || this.currentUser.username,
+                    remarks: remarks
+                });
+                
+                await this.saveData();
+                this.addAuditLog('出入庫操作', `${opType === 'in' ? '入庫' : '出庫'} ${partNumber} ${opQty} ${item.unit}`);
+                this.showToast(`✅ ${opType === 'in' ? '入庫' : '出庫'}成功`, false);
+                document.getElementById('partNumberInput').value = '';
+                document.getElementById('opQtyInput').value = '1';
+                document.getElementById('remarksInput').value = '';
+                this.updatePartDetails();
+            }
+            
+            async renderCalendar() {
+                const year = this.currentMonth.getFullYear();
+                const month = this.currentMonth.getMonth();
+                const firstDay = new Date(year, month, 1);
+                const startDate = new Date(year, month, 1 - firstDay.getDay());
+                
+                const days = [];
+                for (let i = 0; i < 42; i++) {
+                    const date = new Date(startDate);
+                    date.setDate(date.getDate() + i);
+                    days.push(date);
+                }
+                
+                const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
+                const monthDisplay = `${year}年 ${month + 1}月`;
+                document.getElementById('monthDisplay').textContent = monthDisplay;
+                
+                let html = '<div class="calendar-header">';
+                dayNames.forEach(d => html += `<div>${d}</div>`);
+                html += '</div><div class="calendar">';
+                
+                days.forEach(date => {
+                    const localDateStr = (d) => {
+                        const y = d.getFullYear();
+                        const mo = String(d.getMonth() + 1).padStart(2, '0');
+                        const dy = String(d.getDate()).padStart(2, '0');
+                        return `${y}-${mo}-${dy}`;
+                    };
+                    const dateStr = localDateStr(date);
+                    const isOtherMonth = date.getMonth() !== month;
+                    const isToday = dateStr === localDateStr(new Date());
+                    const events = this.announcements.filter(a => a.date === dateStr && a.type === 'todo');
+                    
+                    html += `<div class="calendar-day ${isOtherMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}" onclick="app.selectDate('${dateStr}')">
+                        <div class="calendar-day-num">${date.getDate()}</div>
+                        <div class="calendar-events">
+                            ${events.map(e => `<div class="calendar-event" style="background: ${this.eventColors[e.color].color};">${e.title}</div>`).join('')}
+                        </div>
+                    </div>`;
+                });
+                
+                html += '</div>';
+                document.getElementById('calendarContainer').innerHTML = html;
+            }
+            
+            async selectDate(dateStr) {
+                this.selectedDate = dateStr;
+                document.getElementById('todoDateInput').value = dateStr;
+                document.getElementById('mainContent').innerHTML = this.renderPage('announcements');
+                await this.attachPageHandlers();
+            }
+            
+            async prevMonth() {
+                this.currentMonth.setMonth(this.currentMonth.getMonth() - 1);
+                await this.renderCalendar();
+            }
+            
+            async nextMonth() {
+                this.currentMonth.setMonth(this.currentMonth.getMonth() + 1);
+                await this.renderCalendar();
+            }
+            
+            async addAnnouncement() {
+                const title = document.getElementById('announcementTitleInput').value;
+                const content = document.getElementById('announcementContentInput').value;
+                
+                if (!title) {
+                    this.showToast('請輸入公告標題', true);
+                    return;
+                }
+                
+                const now = new Date();
+                const localDate = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+                // 記錄使用者名稱（顯示名稱）
+                const displayName = this.currentUser.name || this.currentUser.username;
+                this.announcements.push({
+                    date: localDate,
+                    title: title,
+                    content: content,
+                    type: 'announcement',
+                    user: displayName,
+                    username: this.currentUser.username
+                });
+                
+                await this.saveData();
+                this.addAuditLog('新增公告', `公告標題：${title}`);
+                this.showToast('✅ 公告已新增', false);
+                document.getElementById('announcementTitleInput').value = '';
+                document.getElementById('announcementContentInput').value = '';
+                document.getElementById('mainContent').innerHTML = this.renderPage('announcements');
+                await this.attachPageHandlers();
+            }
+            
+            async deleteAnnouncement(index) {
+                if (confirm('確定要刪除此公告嗎？')) {
+                    const announcement = this.announcements.filter(a => a.type === 'announcement')[index];
+                    this.announcements = this.announcements.filter(a => a !== announcement);
+                    await this.saveData();
+                    this.addAuditLog('刪除公告', `公告標題：${announcement.title}`);
+                    this.showToast('✅ 公告已刪除', false);
+                    document.getElementById('mainContent').innerHTML = this.renderPage('announcements');
+                    await this.attachPageHandlers();
+                }
+            }
+            
+            async addTodo() {
+                const date = document.getElementById('todoDateInput').value;
+                const title = document.getElementById('todoTitleInput').value;
+                const content = document.getElementById('todoContentInput').value;
+                const color = parseInt(document.querySelector('input[name="todoColor"]:checked').value);
+                
+                if (!date || !title) {
+                    this.showToast('請輸入日期和事項標題', true);
+                    return;
+                }
+                
+                // 自動記錄新增資料的使用者（顯示名稱）
+                const displayName = this.currentUser.name || this.currentUser.username;
+                this.announcements.push({
+                    date: date,
+                    title: title,
+                    content: content,
+                    color: color,
+                    type: 'todo',
+                    user: displayName,
+                    username: this.currentUser.username
+                });
+                
+                await this.saveData();
+                this.addAuditLog('新增待辦事項', `日期：${date}，標題：${title}，新增者：${displayName}`);
+                this.showToast('✅ 待辦事項已新增', false);
+                document.getElementById('todoTitleInput').value = '';
+                document.getElementById('todoContentInput').value = '';
+                document.getElementById('mainContent').innerHTML = this.renderPage('announcements');
+                await this.attachPageHandlers();
+            }
+            
+            async deleteTodo(index) {
+                if (confirm('確定要刪除此待辦事項嗎？')) {
+                    const todo = this.announcements[index];
+                    this.announcements.splice(index, 1);
+                    await this.saveData();
+                    this.addAuditLog('刪除待辦事項', `標題：${todo.title}`);
+                    this.showToast('✅ 待辦事項已刪除', false);
+                    document.getElementById('mainContent').innerHTML = this.renderPage('announcements');
+                    await this.attachPageHandlers();
+                }
+            }
+            
+            handleRepairFileUpload(file) {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const content = e.target.result;
+                        const lines = content.split('\n');
+                        
+                        if (lines.length < 2) {
+                            this.showToast('❌ CSV 格式不正確', true);
+                            return;
+                        }
+                        
+                        const headers = lines[1].split(',').map(h => h.trim());
+                        this.repairHeaders = headers;
+                        
+                        const data = [];
+                        for (let i = 2; i < lines.length; i++) {
+                            if (!lines[i].trim()) continue;
+                            const cells = lines[i].split(',').map(c => c.trim());
+                            const row = {};
+                            headers.forEach((h, idx) => {
+                                row[h] = cells[idx] || '';
+                            });
+                            data.push(row);
+                        }
+                        
+                        this.repairs = data;
+                        // 記錄匯入時間與更新者
+                        this.lastRepairImport = {
+                            timestamp: new Date().toLocaleString('zh-TW'),
+                            user: this.currentUser.name || this.currentUser.username
+                        };
+                        await this.saveData();
+                        this.addAuditLog('匯入維修紀錄', `已匯入 ${data.length} 筆維修紀錄`);
+                        this.showToast(`✅ 已匯入 ${data.length} 筆維修紀錄`, false);
+                        document.getElementById('mainContent').innerHTML = this.renderPage('import');
+                        await this.attachPageHandlers();
+                    } catch (error) {
+                        this.showToast('❌ 檔案解析失敗', true);
+                    }
+                };
+                reader.readAsText(file);
+            }
+            
+            searchRepairs() {
+                const headers = this.repairHeaders.length > 0 ? this.repairHeaders : ['維修單編號', '申請人', '申請單位', '設備名稱', '故障說明', '完工日期'];
+                if (!this.repairColumnVisible) {
+                    this.repairColumnVisible = {};
+                    headers.forEach((h, i) => { this.repairColumnVisible[i] = true; });
+                }
+                const visibleIndices = headers.map((h, i) => i).filter(i => this.repairColumnVisible[i] !== false);
+                const dateRangeCols = this.repairDateRangeCols || [3, 6];
+                
+                // 文字搜尋條件
+                const searchInputs = document.querySelectorAll('.repair-search-input');
+                const filters = {};
+                searchInputs.forEach(input => {
+                    const value = input.value.toLowerCase();
+                    if (value) filters[parseInt(input.dataset.index)] = value;
+                });
+                
+                // 日期範圍搜尋條件
+                const dateFilters = {};
+                document.querySelectorAll('.repair-date-start').forEach(input => {
+                    const idx = parseInt(input.dataset.index);
+                    if (!dateFilters[idx]) dateFilters[idx] = {};
+                    dateFilters[idx].start = input.value; // YYYY-MM-DD
+                });
+                document.querySelectorAll('.repair-date-end').forEach(input => {
+                    const idx = parseInt(input.dataset.index);
+                    if (!dateFilters[idx]) dateFilters[idx] = {};
+                    dateFilters[idx].end = input.value; // YYYY-MM-DD
+                });
+                
+                let filtered = this.repairs;
+                
+                // 文字過濾
+                Object.keys(filters).forEach(idxStr => {
+                    const idx = parseInt(idxStr);
+                    const key = headers[idx];
+                    filtered = filtered.filter(r => (r[key] || '').toLowerCase().includes(filters[idx]));
+                });
+                
+                // 日期範圍過濾（支援純日期 YYYY-MM-DD 及含時間 YYYY-MM-DD HH:mm 等格式）
+                // 關鍵修正：支援無前導零的日期格式（如 YYYY/M/D 或 YYYY/MM/D）
+                Object.keys(dateFilters).forEach(idxStr => {
+                    const idx = parseInt(idxStr);
+                    const key = headers[idx];
+                    const { start, end } = dateFilters[idx];
+                    if (start || end) {
+                        filtered = filtered.filter(r => {
+                            const val = (r[key] || '').trim();
+                            if (!val) return false;
+                            // 步驟 1: 將 / 換成 -，然後只取前 10 碼（YYYY-MM-DD 或 YYYY-M-D）
+                            let dateStr = val.replace(/\//g, '-').substring(0, 10).trim();
+                            // 步驟 2: 補零邏輯 - 將 YYYY-M-D 或 YYYY-MM-D 轉換為 YYYY-MM-DD
+                            const parts = dateStr.split('-');
+                            if (parts.length === 3) {
+                                const [y, m, d] = parts;
+                                // 檢查是否為有效的年月日
+                                if (/^\d{4}$/.test(y) && /^\d{1,2}$/.test(m) && /^\d{1,2}$/.test(d)) {
+                                    // 補零：確保月和日都是 2 位數
+                                    const normalized = y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+                                    // 步驟 3: 驗證正規化後的日期格式
+                                    if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return false;
+                                    // 步驟 4: 精確比較：使用字串比較（YYYY-MM-DD 格式可直接按字典序比較）
+                                    if (start && start.trim() && normalized < start.trim()) return false;
+                                    if (end && end.trim() && normalized > end.trim()) return false;
+                                    return true;
+                                }
+                            }
+                            return false;
+                        });
+                    }
+                });
+                
+                const colWidths = this.repairColumnWidths || {};
+                let html = '';
+                filtered.forEach((r, i) => {
+                    html += '<tr>';
+                    visibleIndices.forEach(vi => {
+                        const key = headers[vi];
+                        html += `<td>${r[key] !== undefined ? r[key] : (Object.values(r)[vi] || '')}</td>`;
+                    });
+                    html += `<td><button class="btn danger small" onclick="app.deleteRepair(${this.repairs.indexOf(r)})">刪除</button></td></tr>`;
+                });
+                
+                document.getElementById('repairsTable').innerHTML = html;
+            }
+            
+            resetRepairSearch() {
+                document.querySelectorAll('.repair-search-input').forEach(input => input.value = '');
+                document.querySelectorAll('.repair-date-start').forEach(input => input.value = '');
+                document.querySelectorAll('.repair-date-end').forEach(input => input.value = '');
+                this.searchRepairs();
+            }
+            
+            async deleteRepair(index) {
+                if (confirm('確定要刪除此維修紀錄嗎？')) {
+                    this.repairs.splice(index, 1);
+                    await this.saveData();
+                    this.addAuditLog('刪除維修紀錄', `已刪除第 ${index + 1} 筆紀錄`);
+                    this.showToast('✅ 維修紀錄已刪除', false);
+                    document.getElementById('mainContent').innerHTML = this.renderPage('repairs');
+                    await this.attachPageHandlers();
+                }
+            }
+            
+            showAddUserModal() {
+                // 取得異動紀錄的實際顯示名稱
+                const auditLabel = this.getMenuLabel('audit').label;
+                const html = `
+                    <div class="modal show" id="userModal">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <span>新增使用者</span>
+                                <button class="modal-close" onclick="document.getElementById('userModal').classList.remove('show')">×</button>
+                            </div>
+                            <div class="form-row full">
+                                <div class="form-group-item">
+                                    <label>使用者名稱</label>
+                                    <input type="text" id="newNameInput" placeholder="輸入使用者名稱...">
+                                </div>
+                            </div>
+                            <div class="form-row full">
+                                <div class="form-group-item">
+                                    <label>帳號</label>
+                                    <input type="text" id="newUsernameInput" placeholder="輸入帳號...">
+                                </div>
+                            </div>
+                            <div class="form-row full">
+                                <div class="form-group-item">
+                                    <label>密碼</label>
+                                    <input type="password" id="newPasswordInput" placeholder="輸入密碼...">
+                                </div>
+                            </div>
+                            <div class="form-row full">
+                                <div class="form-group-item">
+                                    <label>功能權限</label>
+                                    <div class="checkbox-group">
+                                        <label><input type="checkbox" value="inventory"> 編輯庫存表</label>
+                                        <label><input type="checkbox" value="inout"> 編輯出入庫</label>
+                                        <label><input type="checkbox" value="repairs"> 編輯維修紀錄</label>
+                                        <label><input type="checkbox" value="announcements"> 編輯公告事項</label>
+                                        <label><input type="checkbox" value="audit"> 查閱${auditLabel}</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="btn success" onclick="app.addUser()" style="width: 100%;">新增使用者</button>
+                        </div>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', html);
+            }
+            
+            async addUser() {
+                const name = document.getElementById('newNameInput').value;
+                const username = document.getElementById('newUsernameInput').value;
+                const password = document.getElementById('newPasswordInput').value;
+                const permissions = [];
+                
+                document.querySelectorAll('#userModal .checkbox-group input:checked').forEach(cb => {
+                    permissions.push(cb.value);
+                });
+                
+                if (!username || !password) {
+                    this.showToast('請輸入帳號和密碼', true);
+                    return;
+                }
+                
+                if (this.users.some(u => u.username === username)) {
+                    this.showToast('帳號已存在', true);
+                    return;
+                }
+                
+                const newId = Math.max(...this.users.map(u => u.id), 0) + 1;
+                this.users.push({
+                    id: newId,
+                    username: username,
+                    password: password,
+                    role: 'user',
+                    name: name || username,
+                    permissions: permissions.length > 0 ? permissions : []
+                });
+                
+                await this.saveData();
+                this.addAuditLog('新增使用者', `帳號：${username}，使用者名稱：${name || username}`);
+                this.showToast('✅ 使用者已新增', false);
+                document.getElementById('userModal').remove();
+                document.getElementById('mainContent').innerHTML = this.renderPage('users');
+                await this.attachPageHandlers();
+            }
+            
+            showEditUserModal(id) {
+                const user = this.users.find(u => u.id === id);
+                if (!user) return;
+                
+                const auditLabel = this.getMenuLabel('audit').label;
+                const html = `
+                    <div class="modal show" id="editUserModal">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <span>修改使用者</span>
+                                <button class="modal-close" onclick="document.getElementById('editUserModal').classList.remove('show')">×</button>
+                            </div>
+                            <div class="form-row full">
+                                <div class="form-group-item">
+                                    <label>使用者名稱</label>
+                                    <input type="text" id="editNameInput" value="${user.name || ''}" placeholder="輸入使用者名稱...">
+                                </div>
+                            </div>
+                            <div class="form-row full">
+                                <div class="form-group-item">
+                                    <label>帳號</label>
+                                    <input type="text" id="editUsernameInput" value="${user.username}" readonly style="background: #f5f5f5;">
+                                </div>
+                            </div>
+                            <div class="form-row full">
+                                <div class="form-group-item">
+                                    <label>密碼</label>
+                                    <input type="password" id="editPasswordInput" placeholder="留空則不修改密碼...">
+                                </div>
+                            </div>
+                            <div class="form-row full">
+                                <div class="form-group-item">
+                                    <label>功能權限</label>
+                                    <div class="checkbox-group">
+                                        <label><input type="checkbox" value="inventory" ${user.permissions && user.permissions.includes('inventory') ? 'checked' : ''}> 編輯庫存表</label>
+                                        <label><input type="checkbox" value="inout" ${user.permissions && user.permissions.includes('inout') ? 'checked' : ''}> 編輯出入庫</label>
+                                        <label><input type="checkbox" value="repairs" ${user.permissions && user.permissions.includes('repairs') ? 'checked' : ''}> 編輯維修紀錄</label>
+                                        <label><input type="checkbox" value="announcements" ${user.permissions && user.permissions.includes('announcements') ? 'checked' : ''}> 編輯公告事項</label>
+                                        <label><input type="checkbox" value="audit" ${user.permissions && user.permissions.includes('audit') ? 'checked' : ''}> 查閱${auditLabel}</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="btn success" onclick="app.updateUser(${id})" style="width: 100%;">保存修改</button>
+                        </div>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', html);
+            }
+            
+            async updateUser(id) {
+                const user = this.users.find(u => u.id === id);
+                if (!user) return;
+                
+                const name = document.getElementById('editNameInput').value;
+                const password = document.getElementById('editPasswordInput').value;
+                const permissions = [];
+                
+                document.querySelectorAll('#editUserModal .checkbox-group input:checked').forEach(cb => {
+                    permissions.push(cb.value);
+                });
+                
+                user.name = name || user.username;
+                if (password) user.password = password;
+                user.permissions = permissions.length > 0 ? permissions : [];
+                
+                await this.saveData();
+                this.addAuditLog('修改使用者', `帳號：${user.username}，使用者名稱：${user.name}`);
+                this.showToast('✅ 使用者已修改', false);
+                document.getElementById('editUserModal').remove();
+                document.getElementById('mainContent').innerHTML = this.renderPage('users');
+                await this.attachPageHandlers();
+            }
+            
+            async deleteUser(id) {
+                if (confirm('確定要刪除此使用者嗎？')) {
+                    const user = this.users.find(u => u.id === id);
+                    this.users = this.users.filter(u => u.id !== id);
+                    await this.saveData();
+                    this.addAuditLog('刪除使用者', `帳號：${user.username}`);
+                    this.showToast('✅ 使用者已刪除', false);
+                    document.getElementById('mainContent').innerHTML = this.renderPage('users');
+                    await this.attachPageHandlers();
+                }
+            }
+            
+            async moveMenuUp(index) {
+                if (index > 0) {
+                    [this.menuOrder[index], this.menuOrder[index - 1]] = [this.menuOrder[index - 1], this.menuOrder[index]];
+                    await this.saveData();
+                    document.getElementById('mainContent').innerHTML = this.renderPage('settings');
+                    await this.attachPageHandlers();
+                }
+            }
+            
+            async moveMenuDown(index) {
+                if (index < this.menuOrder.length - 1) {
+                    [this.menuOrder[index], this.menuOrder[index + 1]] = [this.menuOrder[index + 1], this.menuOrder[index]];
+                    await this.saveData();
+                    document.getElementById('mainContent').innerHTML = this.renderPage('settings');
+                    await this.attachPageHandlers();
+                }
+            }
+            
+            hasPermission(permission) {
+                if (this.currentUser.role === 'admin') return true;
+                return this.currentUser.permissions && this.currentUser.permissions.includes(permission);
+            }
+            
+            showToast(message, isError = false) {
+                const toast = document.createElement('div');
+                toast.className = `toast ${isError ? 'error' : ''}`;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            }
+        }
+        
+        let app;
+        document.addEventListener('DOMContentLoaded', async () => {
+            app = new InventoryApp();
+            await app.init();
+        });
+    </script>
+</body>
+</html>
